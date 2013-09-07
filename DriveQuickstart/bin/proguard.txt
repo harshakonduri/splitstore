@@ -1,0 +1,9 @@
+# view AndroidManifest.xml #generated:17
+-keep class com.example.drivequickstart.MainActivity { <init>(...); }
+
+# onClick res/layout/activity_main.xml #generated:27
+-keepclassmembers class * { *** download(...); }
+
+# onClick res/layout/activity_main.xml #generated:17
+-keepclassmembers class * { *** upload(...); }
+
