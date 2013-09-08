@@ -1,15 +1,24 @@
 package com.example.drivequickstart;
 
+import java.io.BufferedOutputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Arrays;
+
 import android.accounts.AccountManager;
 import android.app.Activity;
 import android.content.Intent;
-import android.net.Uri;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Picture;
 import android.os.Bundle;
+import android.os.Environment;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
+
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
@@ -28,9 +37,9 @@ public class MainActivity extends Activity {
   static final int CAPTURE_IMAGE = 3;
   static final int DOWNLOAD_FILE = 4;  
   private static Drive service;
-  private static String splitstorefileName = "ex.txt", splitstorefileMimeType = "text/plain",folderName="divideandprotect";
+  //private static String splitstorefileName = "ex.txt", splitstorefileMimeType = "text/plain",folderName="divideandprotect";
   private GoogleAccountCredential credential;
-  private static boolean isFolderPresent = false;
+  //private static boolean isFolderPresent = false;
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -47,17 +56,17 @@ public class MainActivity extends Activity {
 	      @Override
 	      public void run() {
 	        try {
-	        	System.out.println("--------"+isFolderPresent);
+	        	
 	            if(!isFolderCreated()) {
 	          	  createFolder();
 	            }
-	            System.out.println("--------"+isFolderPresent);
+	            
 	        // File's binary content
 	          java.io.File fileContent = new java.io.File("/sdcard/IMG.jpg");
-	          FileContent mediaContent = new FileContent("image/jpg", fileContent);
+	          FileContent mediaContent = new FileContent("image/jpeg", fileContent);
 	          File body = new File();
 	          body.setTitle(fileContent.getName());
-	          body.setMimeType("image/jpg");	          
+	          body.setMimeType("image/jpeg");	          
 	          java.util.List<File> files = service.files().list().setQ("mimeType = 'application/vnd.google-apps.folder'").execute().getItems();
 	          for (File f : files) {
 	//              System.out.println(f.getTitle() + ", " + f.getMimeType());
@@ -92,22 +101,19 @@ public class MainActivity extends Activity {
 	    	  
 	          java.util.List<File> files;
 			try {
-				byte [] b=new byte[2048];
-				files = service.files().list().setQ("mimeType = 'image/jpg'").execute().getItems();//
+				
+				files = service.files().list().setQ("mimeType = 'image/jpeg'").execute().getItems();//
 				File file=null;
 		          for (File f : files) {
 		              System.out.println(f.getTitle() + ", " + f.getMimeType());
 		              if(f.getTitle().equals("IMG.jpg"))
 		              {
 		            	  file = service.files().get(f.getId()).execute();
-		  		        InputStream ip = downloadFile(service, file);
-		  		        System.out.println(ip.available()+""+file.getDownloadUrl());
-				        while(ip.read(b)!=0) {
-				        }
+		            	  downloadFile(service, file);
+		  		      //System.out.println(ip.available()+""+file.getDownloadUrl());
+		  		    
 		              }
 		          }
-		        String s = new String(b);
-		        System.out.println(s);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -117,11 +123,35 @@ public class MainActivity extends Activity {
 	    	  
 	    	    if (file.getDownloadUrl() != null && file.getDownloadUrl().length() > 0) {
 	    	      try {
+	    	    	  //showToast("Into Download ");	  
 	    	        HttpResponse resp =
 	    	            service.getRequestFactory().buildGetRequest(new GenericUrl(file.getDownloadUrl()))
 	    	                .execute();
-	    	        System.out.println(resp.getContentType()+" "+resp.parseAsString()  + " "+resp.getContent());
-	    	        return null;
+	    	        //System.out.println(resp.getContentType()+" "+resp.parseAsString()  + " "+resp.getContent());
+	    	        String dir = Environment.getExternalStorageDirectory().toString();
+			  		InputStream is = resp.getContent();  
+			  		showToast("Writing TO FILE "+is.available()+" many");
+			  		OutputStream os = null; 
+	    	        int temp=0,i=0;
+			  		  byte [] b = new byte[900*1024];
+			  		  int bread=0;
+			  		
+			  		  while(true) {
+			  			temp = is.read();
+			  			if(temp == -1)
+			  				break;
+			  			else
+			  				b[i++] = (byte)temp;
+			  		  }
+			  		showToast("Writing TO FILE ");
+			  		  os = new BufferedOutputStream(new FileOutputStream("/sdcard/downloadImage.jpg"));
+			  		  os.write(b);
+			  		  os.flush();
+			  		  os.close();       
+			  		Log.v("Print","Wrote file");
+			  		  return resp.getContent();
+	    	        
+	    	        
 	    	      } catch (IOException e) {
 	    	        // An error occurred.
 	    	        e.printStackTrace();
@@ -144,7 +174,6 @@ public class MainActivity extends Activity {
       try {
 		File filef = service.files().insert(bodyf).execute();
 	} catch (IOException e) {
-		isFolderPresent = false;
 		System.out.println("folder not created");
 		e.printStackTrace();
 	}
@@ -157,14 +186,14 @@ public class MainActivity extends Activity {
 		for (File f : filesch) {
 	          System.out.println(f.getTitle() + ", " + f.getMimeType());
 	          if(f.getTitle().equals("xyz")) {
-	        	  isFolderPresent = true;
+	        	  return true;
 	          } // check if a folder is present
 	      }
 	} catch (IOException e) {
 		// TODO Auto-generated catch block
 		e.printStackTrace();
 	}
-      return isFolderPresent;
+      return false;
 }
   
   @Override
